@@ -1,5 +1,5 @@
 defmodule RazorpayEx.Error do
-  @moduledoc """
+  @moduledoc ~S"""
   Error handling for Razorpay API.
 
   This module provides structured error handling for Razorpay API responses.
@@ -21,10 +21,10 @@ defmodule RazorpayEx.Error do
 
   ## Examples
 
-      case Razorpay.Payment.fetch("invalid_id") do
+      case RazorpayEx.Payment.fetch("invalid_id") do
         {:ok, payment} ->
           # Handle success
-        {:error, %Razorpay.Error{code: "BAD_REQUEST_ERROR"} = error} ->
+        {:error, %RazorpayEx.Error{code: "BAD_REQUEST_ERROR"} = error} ->
           IO.puts("Bad request: #{error.description}")
         {:error, error} ->
           IO.puts("Unknown error: #{inspect(error)}")
