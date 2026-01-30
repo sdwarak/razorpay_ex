@@ -54,6 +54,12 @@ defmodule RazorpayEx do
 
   alias RazorpayEx.{Config, Client, Webhook}
 
+  @version Mix.Project.config()[:version]
+
+  def version do
+    @version
+  end
+
   @doc """
   Setup basic authentication - equivalent to Ruby's `Razorpay.setup(key_id, key_secret)`
   """
