@@ -1,0 +1,43 @@
+# The directory Mix will write compiled artifacts to.
+/_build/
+
+# If you run "mix test --cover", coverage assets end up here.
+/cover/
+
+# The directory Mix downloads your dependencies sources to.
+/deps/
+
+# Where third-party dependencies like ExDoc output generated docs.
+/doc/
+
+# Temporary files, for example, from tests.
+/tmp/
+
+# If the VM crashes, it generates a dump, let's ignore it too.
+erl_crash.dump
+
+# Also ignore archive artifacts (built via "mix archive.build").
+*.ez
+
+# Ignore package tarball (built via "mix hex.build").
+razorpay_ex-*.tar
+
+# Ignore .fetch files in case you have "git" set as download strategy
+# in your Hex config.
+/hex/
+
+# If you run "mix clean" with the "--all" flag, it'll delete this.
+# You may want to commit this if you store generated files in your repo.
+/mix.lock
+
+# Temporary files, for example, from tests.
+/tmp/
+
+# Environment-specific config files.
+/config/*.secret.exs
+
+# Credo cache file
+/.credo_cache/
+
+# ElixirLS extension might create this
+/.elixir_ls/
