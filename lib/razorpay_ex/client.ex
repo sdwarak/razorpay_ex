@@ -14,7 +14,9 @@ defmodule RazorpayEx.Client do
       {:ok, response} = RazorpayEx.Client.request(:post, "/orders", %{amount: 50000}, timeout: 60000)
   """
 
-  alias RazorpayEx.{Config, Constants, Error, Entity}
+  alias RazorpayEx.{Config, Constants, Error, Entity, HttpClient}
+
+  @http_client Application.get_env(:razorpay_ex, :http_client, RazorpayEx.HttpAdapter)
 
   @default_timeout 30_000
   @default_headers [
@@ -53,30 +55,33 @@ defmodule RazorpayEx.Client do
 
       # With query parameters
       {:ok, payments} = RazorpayEx.Client.request(:get, "/payments", %{}, params: %{count: 10})
-  """
+  """ # This needs to be updated to use runtime configuration
+
+
+  defp http_client do
+    Application.get_env(:razorpay_ex, :http_client, RazorpayEx.HttpAdapter)
+  end
+
   @spec request(http_method, String.t(), map(), request_options()) :: response()
   def request(method, path, data \\ %{}, opts \\ []) do
-    client_opts = build_client_opts(opts)
     url = build_url(path, opts)
     headers = build_headers(opts)
     body = encode_body(data, method)
+    query_params = Keyword.get(opts, :params, %{})
 
     options = [
       timeout: Keyword.get(opts, :timeout, @default_timeout),
       recv_timeout: Keyword.get(opts, :timeout, @default_timeout),
-      ssl: [
-        versions: [:"tlsv1.2"],
-        verify: :verify_peer,
-        cacertfile: :certifi.cacertfile()
-      ]
+      params: query_params
     ]
 
-    case HTTPoison.request(method, url, body, headers, options) do
-      {:ok, response} ->
-        handle_response(response)
+    # Use http_client/0 function instead of @http_client
+    case http_client().request(method, url, body, headers, options) do
+      {:ok, %{status_code: status, body: body, headers: _headers}} ->
+        handle_response(status, body)
 
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        {:error, Error.new(:network_error, "HTTPoison error: #{inspect(reason)}")}
+      {:error, error} ->
+        {:error, Error.new(:network_error, "HTTP error: #{inspect(error.reason)}")}
     end
   end
 
@@ -87,23 +92,31 @@ defmodule RazorpayEx.Client do
 
   ## Examples
 
-      {:ok, %HTTPoison.Response{} = response} =
+      {:ok, response} =
         RazorpayEx.Client.raw_request(:get, "/payments/pay_123")
   """
-  @spec raw_request(http_method, String.t(), map(), request_options()) ::
-          {:ok, HTTPoison.Response.t()} | {:error, Error.t()}
+   @spec raw_request(http_method, String.t(), map(), request_options()) ::
+    {:ok, map()} | {:error, Error.t()}
   def raw_request(method, path, data \\ %{}, opts \\ []) do
-    client_opts = build_client_opts(opts)
     url = build_url(path, opts)
     headers = build_headers(opts)
     body = encode_body(data, method)
+    query_params = Keyword.get(opts, :params, %{})
 
     options = [
       timeout: Keyword.get(opts, :timeout, @default_timeout),
-      recv_timeout: Keyword.get(opts, :timeout, @default_timeout)
+      recv_timeout: Keyword.get(opts, :timeout, @default_timeout),
+      params: query_params
     ]
 
-    HTTPoison.request(method, url, body, headers, options)
+    # Use http_client/0 function instead of @http_client
+    case http_client().request(method, url, body, headers, options) do
+      {:ok, response} ->
+        {:ok, response}
+
+      {:error, error} ->
+        {:error, Error.new(:network_error, "HTTP error: #{inspect(error.reason)}")}
+    end
   end
 
   # Private functions
@@ -120,12 +133,28 @@ defmodule RazorpayEx.Client do
 
   defp build_headers(opts) do
     custom_headers = Keyword.get(opts, :headers, [])
+    config_headers = Config.custom_headers()
     auth_header = build_auth_header()
 
+    # Convert config headers map to list of tuples with lowercased keys
+    config_header_list =
+      Enum.map(config_headers, fn {k, v} ->
+        {String.downcase(to_string(k)), to_string(v)}
+      end)
+
+    # Convert custom_headers to have string keys
+    custom_headers_normalized =
+      Enum.map(custom_headers, fn {k, v} ->
+        {String.downcase(to_string(k)), to_string(v)}
+      end)
+
+    # Start with default headers
     @default_headers
-    |> Keyword.merge(custom_headers)
-    |> Keyword.put_new(:authorization, auth_header)
-    |> Enum.map(fn {k, v} -> {to_string(k), to_string(v)} end)
+    |> Enum.map(fn {k, v} -> {String.downcase(to_string(k)), to_string(v)} end)
+    |> Kernel.++(config_header_list)
+    |> Kernel.++(custom_headers_normalized)
+    |> Kernel.++([{"authorization", auth_header}])
+    |> Enum.uniq_by(fn {k, _v} -> k end)
   end
 
   defp build_auth_header do
@@ -145,7 +174,7 @@ defmodule RazorpayEx.Client do
 
   defp encode_body(_, _), do: ""
 
-  defp handle_response(%HTTPoison.Response{status_code: status, body: body}) do
+  defp handle_response(status, body) do
     cond do
       status >= 200 && status < 300 ->
         parse_success_response(body)
@@ -194,19 +223,21 @@ defmodule RazorpayEx.Client do
   defp transform_response(response), do: response
 
   defp transform_entity(%{"entity" => entity_type} = data) do
-    module_name =
-      entity_type
+    module_name = entity_type
       |> String.split("_")
       |> Enum.map(&String.capitalize/1)
       |> Enum.join("")
 
     try do
       module = Module.safe_concat([RazorpayEx, module_name])
-      struct(module, data)
+      # Convert string keys to atoms for struct creation
+      atom_data = for {key, val} <- data, into: %{}, do: {String.to_atom(key), val}
+      struct(module, atom_data)
     rescue
       ArgumentError ->
         # Fall back to Entity if specific module doesn't exist
-        struct(Entity, data)
+        atom_data = for {key, val} <- data, into: %{}, do: {String.to_atom(key), val}
+        struct(Entity, atom_data)
     end
   end
 
@@ -214,7 +245,29 @@ defmodule RazorpayEx.Client do
     data
   end
 
-  defp build_client_opts(opts) do
-    Keyword.take(opts, [:timeout, :headers, :params, :host])
+  defp parse_success_response(""), do: {:ok, %{}}
+
+  defp parse_success_response(body) do
+    case Jason.decode(body) do
+      {:ok, parsed} ->
+        {:ok, transform_response(parsed)}
+
+      {:error, error} ->
+        {:error, Error.new(:invalid_json, "Failed to parse JSON: #{inspect(error)}")}
+    end
+  end
+
+  defp parse_error_response("", status), do: parse_error_response("{}", status)
+
+  defp parse_error_response(body, status) do
+    case Jason.decode(body) do
+      {:ok, %{"error" => error}} ->
+        {:error, Error.from_map(error, status)}
+      {:ok, parsed} ->
+        # If there's no "error" key, but it's an error status, create generic error
+        {:error, Error.new("BAD_REQUEST_ERROR", Map.get(parsed, "description", "Authentication failed"), status, body)}
+      {:error, _} ->
+        {:error, Error.new("HTTP_#{status}", "HTTP Error #{status}: #{body}", status)}
+    end
   end
 end

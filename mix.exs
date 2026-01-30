@@ -66,6 +66,7 @@ defmodule RazorpayEx.MixProject do
       source_url: @source_url,
       extras: [
         "README.md",
+        "CHANGELOG.md",
         "LICENSE"
       ],
       groups_for_modules: [

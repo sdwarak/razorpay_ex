@@ -1,0 +1,5 @@
+# Changelog
+
+## - 2026-01-30
+
+*First release.*

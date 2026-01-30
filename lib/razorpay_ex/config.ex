@@ -64,6 +64,10 @@ defmodule RazorpayEx.Config do
   @default_api_base_url Constants.base_url()
   @default_auth_base_url Constants.auth_url()
 
+  def custom_headers do
+    Application.get_env(:razorpay_ex, :custom_headers, %{})
+  end
+
   @doc """
   Returns the current configuration.
   """
