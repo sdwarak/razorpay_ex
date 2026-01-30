@@ -36,3 +36,8 @@ Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_do
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at <https://hexdocs.pm/razorpay_ex>.
 
+License
+MIT License - see LICENSE file for details.
+
+Disclaimer
+This library is not officially supported by Razorpay. It's a community-maintained project modeled after the official Ruby SDK.
