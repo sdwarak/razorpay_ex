@@ -18,7 +18,7 @@ defmodule RazorpayEx.MixProject do
       homepage_url: @source_url,
       docs: docs(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
+      preferred_envs: [
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
@@ -66,7 +66,6 @@ defmodule RazorpayEx.MixProject do
       source_url: @source_url,
       extras: [
         "README.md",
-        "CHANGELOG.md",
         "LICENSE"
       ],
       groups_for_modules: [
