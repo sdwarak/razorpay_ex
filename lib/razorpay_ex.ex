@@ -54,12 +54,6 @@ defmodule RazorpayEx do
 
   alias RazorpayEx.{Config, Client, Webhook}
 
-  @version Mix.Project.config()[:version]
-
-  def version do
-    @version
-  end
-
   @doc """
   Setup basic authentication - equivalent to Ruby's `Razorpay.setup(key_id, key_secret)`
   """
@@ -97,7 +91,7 @@ defmodule RazorpayEx do
   """
   @spec version() :: String.t()
   def version do
-    Application.spec(:razorpay_elixir, :vsn)
+    Application.spec(:razorpay_ex, :vsn)
     |> to_string()
   end
 
