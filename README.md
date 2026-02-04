@@ -9,7 +9,7 @@ An Elixir client for the Razorpay API, providing a clean and intuitive interface
 
 ## Features
 
-- Full API coverage (Payments, Orders, Refunds, Customers, Invoices, etc.)
+- API coverage for basic uses cases
 - Support for both Basic Auth and OAuth authentication
 - Webhook signature verification
 - Comprehensive error handling with specific error types
