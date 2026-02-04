@@ -19,7 +19,7 @@ An Elixir client for the Razorpay API, providing a clean and intuitive interface
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
+The package can be installed
 by adding `razorpay_ex` to your list of dependencies in `mix.exs`:
 
 ```elixir
