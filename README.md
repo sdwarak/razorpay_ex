@@ -25,7 +25,7 @@ by adding `razorpay_ex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:razorpay_ex, "~> 0.1.0"}
+    {:razorpay_ex, "~> 0.1.1"}
   ]
 end
 ```
