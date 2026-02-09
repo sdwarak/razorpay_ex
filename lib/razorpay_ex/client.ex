@@ -245,29 +245,4 @@ defmodule RazorpayEx.Client do
     data
   end
 
-  defp parse_success_response(""), do: {:ok, %{}}
-
-  defp parse_success_response(body) do
-    case Jason.decode(body) do
-      {:ok, parsed} ->
-        {:ok, transform_response(parsed)}
-
-      {:error, error} ->
-        {:error, Error.new(:invalid_json, "Failed to parse JSON: #{inspect(error)}")}
-    end
-  end
-
-  defp parse_error_response("", status), do: parse_error_response("{}", status)
-
-  defp parse_error_response(body, status) do
-    case Jason.decode(body) do
-      {:ok, %{"error" => error}} ->
-        {:error, Error.from_map(error, status)}
-      {:ok, parsed} ->
-        # If there's no "error" key, but it's an error status, create generic error
-        {:error, Error.new("BAD_REQUEST_ERROR", Map.get(parsed, "description", "Authentication failed"), status, body)}
-      {:error, _} ->
-        {:error, Error.new("HTTP_#{status}", "HTTP Error #{status}: #{body}", status)}
-    end
-  end
 end

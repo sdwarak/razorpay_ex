@@ -67,7 +67,7 @@ defmodule RazorpayEx do
   """
   @spec setup_with_oauth(String.t()) :: :ok
   def setup_with_oauth(access_token) do
-    Config.setup_with_oauth(access_token)
+    Config.setup_oauth(access_token)
   end
 
   @doc """
@@ -75,7 +75,7 @@ defmodule RazorpayEx do
   """
   @spec headers(map()) :: :ok
   def headers(custom_headers) when is_map(custom_headers) do
-    Config.set_headers(custom_headers)
+    Config.set(custom_headers)
   end
 
   @doc """

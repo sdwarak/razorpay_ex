@@ -64,10 +64,6 @@ defmodule RazorpayEx.Config do
   @default_api_base_url Constants.base_url()
   @default_auth_base_url Constants.auth_url()
 
-  def custom_headers do
-    Application.get_env(:razorpay_ex, :custom_headers, %{})
-  end
-
   @doc """
   Returns the current configuration.
   """
@@ -99,6 +95,14 @@ defmodule RazorpayEx.Config do
   """
   @spec set(map()) :: :ok
   def set(config) when is_map(config) do
+    # Handle custom_headers specially - merge with existing
+    config = if custom_headers = config[:custom_headers] do
+      existing = Application.get_env(:razorpay_ex, :custom_headers, %{})
+      Map.put(config, :custom_headers, Map.merge(existing, custom_headers))
+    else
+      config
+    end
+
     Enum.each(config, fn {key, value} ->
       Application.put_env(:razorpay_ex, key, value)
     end)
