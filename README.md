@@ -9,6 +9,7 @@ An Elixir client for the Razorpay API, providing a clean and intuitive interface
 
 ## Features
 
+- Still in experimental phase, use with caution
 - API coverage for basic uses cases
 - Support for both Basic Auth and OAuth authentication
 - Webhook signature verification
@@ -25,7 +26,7 @@ by adding `razorpay_ex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:razorpay_ex, "~> 0.1.1"}
+    {:razorpay_ex, "~> 0.1.2"}
   ]
 end
 ```
