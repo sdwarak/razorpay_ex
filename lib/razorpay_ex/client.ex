@@ -80,8 +80,8 @@ defmodule RazorpayEx.Client do
       {:ok, %{status_code: status, body: body, headers: _headers}} ->
         handle_response(status, body)
 
-      {:error, error} ->
-        {:error, Error.new(:network_error, "HTTP error: #{inspect(error.reason)}")}
+      {:error, _error} ->
+        {:error, Error.new(:network_error, "HTTP request failed")}
     end
   end
 
@@ -114,8 +114,8 @@ defmodule RazorpayEx.Client do
       {:ok, response} ->
         {:ok, response}
 
-      {:error, error} ->
-        {:error, Error.new(:network_error, "HTTP error: #{inspect(error.reason)}")}
+      {:error, _error} ->
+        {:error, Error.new(:network_error, "HTTP request failed")}
     end
   end
 
@@ -194,8 +194,8 @@ defmodule RazorpayEx.Client do
       {:ok, parsed} ->
         {:ok, transform_response(parsed)}
 
-      {:error, error} ->
-        {:error, Error.new(:invalid_json, "Failed to parse JSON: #{inspect(error)}")}
+      {:error, _error} ->
+        {:error, Error.new(:invalid_json, "Failed to parse response body")}
     end
   end
 
@@ -208,7 +208,7 @@ defmodule RazorpayEx.Client do
         {:error, Error.new("HTTP_#{status}", "HTTP Error #{status}", status)}
 
       {:error, _} ->
-        {:error, Error.new("HTTP_#{status}", "HTTP Error #{status}: #{body}", status)}
+        {:error, Error.new("HTTP_#{status}", "HTTP Error #{status}", status)}
     end
   end
 
@@ -230,19 +230,25 @@ defmodule RazorpayEx.Client do
 
     try do
       module = Module.safe_concat([RazorpayEx, module_name])
-      # Convert string keys to atoms for struct creation
-      atom_data = for {key, val} <- data, into: %{}, do: {String.to_atom(key), val}
-      struct(module, atom_data)
+      struct(module, to_existing_atom_keys(data))
     rescue
       ArgumentError ->
-        # Fall back to Entity if specific module doesn't exist
-        atom_data = for {key, val} <- data, into: %{}, do: {String.to_atom(key), val}
-        struct(Entity, atom_data)
+        struct(Entity, to_existing_atom_keys(data))
     end
   end
 
   defp transform_entity(data) do
     data
+  end
+
+  defp to_existing_atom_keys(map) do
+    Map.new(map, fn {key, val} ->
+      try do
+        {String.to_existing_atom(key), val}
+      rescue
+        ArgumentError -> {key, val}
+      end
+    end)
   end
 
 end

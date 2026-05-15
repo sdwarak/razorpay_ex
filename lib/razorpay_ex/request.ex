@@ -32,8 +32,8 @@ defmodule RazorpayEx.Request do
     case HTTPoison.request(method, url, body, headers, options) do
       {:ok, response} ->
         {:ok, response}
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        {:error, Error.new(:network_error, "HTTP error: #{inspect(reason)}")}
+      {:error, %HTTPoison.Error{reason: _reason}} ->
+        {:error, Error.new(:network_error, "HTTP request failed")}
     end
   end
 
@@ -150,27 +150,27 @@ defmodule RazorpayEx.Request do
   defp build_url(path, opts) do
     base_url =
       case Keyword.get(opts, :host, :api) do
-        :auth -> Constants.auth_url()
-        _ -> Config.api_url()
+        :auth -> Config.auth_base_url()
+        _ -> Config.api_base_url()
       end
     base_url <> path
   end
 
   defp build_headers(opts) do
-    custom_headers = Config.get_headers()
+    custom_headers = Config.custom_headers()
 
     auth_header =
-      case Config.get_auth() do
-        {:basic, key_id, key_secret} ->
-          auth = Base.encode64("#{key_id}:#{key_secret}")
+      case Config.auth_type() do
+        :oauth ->
+          {"Authorization", "Bearer #{Config.access_token()}"}
+        _ ->
+          auth = Base.encode64("#{Config.key_id()}:#{Config.key_secret()}")
           {"Authorization", "Basic #{auth}"}
-        {:oauth, token} ->
-          {"Authorization", "Bearer #{token}"}
       end
 
     default_headers = %{
       "Content-Type" => "application/json",
-      "User-Agent" => Constants.user_agent()
+      "User-Agent" => "razorpay_ex/#{RazorpayEx.version()}"
     }
 
     default_headers

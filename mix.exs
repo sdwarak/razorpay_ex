@@ -1,7 +1,7 @@
 defmodule RazorpayEx.MixProject do
   use Mix.Project
 
-  @version "0.1.2"
+  @version "0.1.3"
   @source_url "https://github.com/sdwarak/razorpay_ex"
   @description "Elixir client for RazorpayEx API - Unofficial library for RazorpayEx payment gateway"
 

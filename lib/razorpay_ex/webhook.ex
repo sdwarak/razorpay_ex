@@ -46,7 +46,16 @@ defmodule RazorpayEx.Webhook do
   @spec verify(String.t(), String.t(), String.t()) :: boolean()
   def verify(payload, signature, secret) do
     expected_signature = generate_signature(payload, secret)
-    expected_signature == signature
+    secure_compare(expected_signature, signature)
+  end
+
+  defp secure_compare(a, b) do
+    # Constant-time comparison via HMAC to prevent timing side-channel attacks
+    # Comparing HMACs of both inputs with a fixed key is safe because the leaked
+    # comparison timing reveals nothing about the original signature values.
+    byte_size(a) == byte_size(b) and
+      :crypto.mac(:hmac, :sha256, a, "secure_compare") ==
+      :crypto.mac(:hmac, :sha256, b, "secure_compare")
   end
 
   @doc """
