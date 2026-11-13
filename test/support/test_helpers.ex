@@ -1,4 +1,4 @@
-# test/support/test_helpers.exs
+# test/support/test_helpers.ex
 defmodule RazorpayEx.TestHelpers do
   @moduledoc """
   Test helpers for RazorpayEx.
@@ -24,30 +24,28 @@ defmodule RazorpayEx.TestHelpers do
 
   def mock_successful_response(entity_type, id, attributes) do
     body =
-      Map.merge(%{
-        "id" => id,
-        "entity" => Atom.to_string(entity_type),
-        "created_at" => :os.system_time(:seconds)
-      }, attributes)
+      Map.merge(
+        %{
+          "id" => id,
+          "entity" => Atom.to_string(entity_type),
+          "created_at" => :os.system_time(:seconds)
+        },
+        attributes
+      )
       |> Jason.encode!()
 
-    %HTTPoison.Response{
-      status_code: 200,
-      body: body
-    }
+    {:ok, %{status_code: 200, body: body, headers: [{"content-type", "application/json"}]}}
   end
 
   def mock_error_response(code, description, status_code \\ 400) do
-    body = Jason.encode!(%{
-      "error" => %{
-        "code" => code,
-        "description" => description
-      }
-    })
+    body =
+      Jason.encode!(%{
+        "error" => %{
+          "code" => code,
+          "description" => description
+        }
+      })
 
-    %HTTPoison.Response{
-      status_code: status_code,
-      body: body
-    }
+    {:ok, %{status_code: status_code, body: body, headers: [{"content-type", "application/json"}]}}
   end
 end

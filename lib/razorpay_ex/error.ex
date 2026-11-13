@@ -3,8 +3,24 @@ defmodule RazorpayEx.Error do
   Error handling for Razorpay API.
 
   This module provides structured error handling for Razorpay API responses.
-  It converts Razorpay error codes into specific error types and provides
-  detailed error information.
+
+  Every API failure is returned as a `{:error, %RazorpayEx.Error{}}` tuple, so a
+  single pattern match covers all of them; use `code` to discriminate:
+
+      case RazorpayEx.Payment.fetch("invalid_id") do
+        {:ok, payment} ->
+          payment
+
+        {:error, %RazorpayEx.Error{code: "BAD_REQUEST_ERROR"} = error} ->
+          IO.puts("Bad request: #{error.description}")
+
+        {:error, %RazorpayEx.Error{code: "NETWORK_ERROR"}} ->
+          IO.puts("Could not reach Razorpay")
+      end
+
+  `RazorpayEx.Errors.BadRequestError`, `RazorpayEx.Errors.GatewayError` and
+  `RazorpayEx.Errors.ServerError` are optional exception structs for callers
+  that would rather raise.
 
   ## Error Structure
 
@@ -18,20 +34,7 @@ defmodule RazorpayEx.Error do
     - `metadata`: Additional error metadata
     - `http_status_code`: HTTP status code
     - `http_body`: Raw HTTP response body
-
-  ## Examples
-
-      case RazorpayEx.Payment.fetch("invalid_id") do
-        {:ok, payment} ->
-          # Handle success
-        {:error, %RazorpayEx.Error{code: "BAD_REQUEST_ERROR"} = error} ->
-          IO.puts("Bad request: #{error.description}")
-        {:error, error} ->
-          IO.puts("Unknown error: #{inspect(error)}")
-      end
   """
-
-  alias RazorpayEx.Errors
 
   defstruct [
     :code,
@@ -71,44 +74,17 @@ defmodule RazorpayEx.Error do
       }, 400)
   """
   @spec from_map(map(), integer()) :: t()
-  def from_map(error_map, status_code) do
-    code = Map.get(error_map, "code", "UNKNOWN_ERROR")
-
-    # Convert snake_case to PascalCase for module name
-    module_name =
-      code
-      |> String.downcase()
-      |> String.split("_")
-      |> Enum.map(&String.capitalize/1)
-      |> Enum.join("")
-
-    try do
-      # Try to find a specific error module
-      module = Module.safe_concat([Razorpay.Errors, module_name])
-      struct(module, %{
-        code: code,
-        description: Map.get(error_map, "description"),
-        field: Map.get(error_map, "field"),
-        step: Map.get(error_map, "step"),
-        reason: Map.get(error_map, "reason"),
-        metadata: Map.get(error_map, "metadata"),
-        http_status_code: status_code,
-        http_body: Jason.encode!(error_map)
-      })
-    rescue
-      ArgumentError ->
-        # Fall back to generic error
-        %__MODULE__{
-          code: code,
-          description: Map.get(error_map, "description"),
-          field: Map.get(error_map, "field"),
-          step: Map.get(error_map, "step"),
-          reason: Map.get(error_map, "reason"),
-          metadata: Map.get(error_map, "metadata"),
-          http_status_code: status_code,
-          http_body: Jason.encode!(error_map)
-        }
-    end
+  def from_map(error_map, status_code) when is_map(error_map) do
+    %__MODULE__{
+      code: Map.get(error_map, "code", "UNKNOWN_ERROR"),
+      description: Map.get(error_map, "description"),
+      field: Map.get(error_map, "field"),
+      step: Map.get(error_map, "step"),
+      reason: Map.get(error_map, "reason"),
+      metadata: Map.get(error_map, "metadata"),
+      http_status_code: status_code,
+      http_body: Jason.encode!(error_map)
+    }
   end
 
   @doc """

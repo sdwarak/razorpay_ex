@@ -19,7 +19,8 @@ defmodule RazorpayEx.Customer do
           contact: String.t() | nil,
           gstin: String.t() | nil,
           notes: map() | nil,
-          created_at: integer() | nil
+          created_at: integer() | nil,
+          extra: map()
         }
 
   defstruct [
@@ -30,7 +31,8 @@ defmodule RazorpayEx.Customer do
     :contact,
     :gstin,
     :notes,
-    :created_at
+    :created_at,
+    extra: %{}
   ]
 
   @doc """

@@ -24,7 +24,8 @@ defmodule RazorpayEx.Order do
           attempts: integer() | nil,
           notes: map() | nil,
           created_at: integer() | nil,
-          offer_id: String.t() | nil
+          offer_id: String.t() | nil,
+          extra: map()
         }
 
   defstruct [
@@ -39,7 +40,8 @@ defmodule RazorpayEx.Order do
     :attempts,
     :notes,
     :created_at,
-    :offer_id
+    :offer_id,
+    extra: %{}
   ]
 
   @doc """
@@ -145,7 +147,8 @@ defmodule RazorpayEx.Order do
 
       {:ok, payments} = RazorpayEx.Order.payments("order_9A33XWu170gUtm")
   """
-  @spec payments(String.t(), map()) :: {:ok, list(RazorpayEx.Payment.t())} | {:error, Razorpay.Error.t()}
+  @spec payments(String.t(), map()) ::
+          {:ok, list(RazorpayEx.Payment.t())} | {:error, Razorpay.Error.t()}
   def payments(id, params \\ %{}) do
     Client.request(:get, "/orders/#{id}/payments", %{}, params: params)
   end

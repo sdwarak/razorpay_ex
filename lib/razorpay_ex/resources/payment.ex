@@ -38,7 +38,8 @@ defmodule RazorpayEx.Payment do
           tax: integer() | nil,
           error_code: String.t() | nil,
           error_description: String.t() | nil,
-          created_at: integer() | nil
+          created_at: integer() | nil,
+          extra: map()
         }
 
   defstruct [
@@ -66,7 +67,8 @@ defmodule RazorpayEx.Payment do
     :tax,
     :error_code,
     :error_description,
-    :created_at
+    :created_at,
+    extra: %{}
   ]
 
   @doc """

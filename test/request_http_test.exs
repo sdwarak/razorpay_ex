@@ -32,11 +32,21 @@ defmodule RazorpayEx.RequestHttpTest do
     Application.delete_env(:razorpay_ex, :access_token)
     Application.delete_env(:razorpay_ex, :custom_headers)
 
+    # The suite installs a Mox mock for the client; these tests exercise the
+    # real HTTPoison/hackney transport instead.
+    previous_client = Application.fetch_env(:razorpay_ex, :http_client)
+    Application.put_env(:razorpay_ex, :http_client, RazorpayEx.HttpAdapter)
+
     on_exit(fn ->
       Enum.each(previous, fn
         {key, {:ok, value}} -> Application.put_env(:razorpay_ex, key, value)
         {key, :error} -> Application.delete_env(:razorpay_ex, key)
       end)
+
+      case previous_client do
+        {:ok, client} -> Application.put_env(:razorpay_ex, :http_client, client)
+        :error -> Application.delete_env(:razorpay_ex, :http_client)
+      end
     end)
 
     %{bypass: bypass}
@@ -56,7 +66,7 @@ defmodule RazorpayEx.RequestHttpTest do
       Plug.Conn.send_resp(conn, 200, body)
     end)
 
-    assert {:ok, %HTTPoison.Response{status_code: 200, body: body}} =
+    assert {:ok, %{status_code: 200, body: body}} =
              RazorpayEx.Request.raw_request(:get, "/v1/payments", %{}, params: %{count: 10})
 
     assert %{"query" => %{"count" => "10"}} = Jason.decode!(body)
@@ -80,7 +90,7 @@ defmodule RazorpayEx.RequestHttpTest do
       Plug.Conn.send_resp(conn, 201, response)
     end)
 
-    assert {:ok, %HTTPoison.Response{status_code: 201, body: body}} =
+    assert {:ok, %{status_code: 201, body: body}} =
              RazorpayEx.Request.raw_request(:post, "/v1/orders", %{
                "amount" => 50_000,
                "currency" => "INR"
@@ -153,5 +163,31 @@ defmodule RazorpayEx.RequestHttpTest do
     assert elapsed < 1_500, "request was not bounded by the configured timeout (#{elapsed}ms)"
 
     Process.exit(server, :kill)
+  end
+
+  test "list endpoints return entities end to end", %{bypass: bypass} do
+    body =
+      Jason.encode!(%{
+        "entity" => "collection",
+        "count" => 2,
+        "items" => [
+          %{
+            "entity" => "payment",
+            "id" => "pay_1",
+            "amount" => 100,
+            "acquirer_data" => %{"rrn" => "1"}
+          },
+          %{"entity" => "payment", "id" => "pay_2", "amount" => 200}
+        ]
+      })
+
+    Bypass.expect_once(bypass, "GET", "/payments", fn conn ->
+      Plug.Conn.send_resp(conn, 200, body)
+    end)
+
+    assert {:ok, [first, second]} = RazorpayEx.Payment.all(%{count: 2})
+    assert %RazorpayEx.Payment{id: "pay_1", amount: 100} = first
+    assert first.extra == %{"acquirer_data" => %{"rrn" => "1"}}
+    assert %RazorpayEx.Payment{id: "pay_2", amount: 200} = second
   end
 end

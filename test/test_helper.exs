@@ -1,6 +1,5 @@
 # test/test_helper.exs
 
-
 # Configure Mox for mocking
 Mox.defmock(RazorpayEx.HttpClientMock, for: RazorpayEx.HttpClient)
 

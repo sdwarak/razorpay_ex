@@ -1,7 +1,7 @@
 defmodule RazorpayEx.MixProject do
   use Mix.Project
 
-  @version "0.2.0"
+  @version "0.3.0"
   @source_url "https://github.com/sdwarak/razorpay_ex"
   @description "Elixir client for RazorpayEx API - Unofficial library for RazorpayEx payment gateway"
 
@@ -11,6 +11,7 @@ defmodule RazorpayEx.MixProject do
       version: @version,
       elixir: "~> 1.17",
       erlang: ">= 27.0",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       description: @description,
@@ -33,6 +34,9 @@ defmodule RazorpayEx.MixProject do
       extra_applications: [:logger, :ssl]
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_env), do: ["lib"]
 
   defp deps do
     [
@@ -71,7 +75,7 @@ defmodule RazorpayEx.MixProject do
         "LICENSE"
       ],
       groups_for_modules: [
-        "Core": [
+        Core: [
           RazorpayEx,
           RazorpayEx.Client,
           RazorpayEx.Config,
@@ -79,19 +83,18 @@ defmodule RazorpayEx.MixProject do
           RazorpayEx.Entity,
           RazorpayEx.Error,
           RazorpayEx.Request,
-          RazorpayEx.Webhook
+          RazorpayEx.Query,
+          RazorpayEx.Webhook,
+          RazorpayEx.HttpAdapter,
+          RazorpayEx.HttpClient
         ],
-        "Resources": [
+        Resources: [
           RazorpayEx.Payment,
           RazorpayEx.Order,
           RazorpayEx.Refund,
-          RazorpayEx.Customer,
-          RazorpayEx.Card,
-          RazorpayEx.Invoice,
-          RazorpayEx.PaymentLink,
-          RazorpayEx.Settlement
+          RazorpayEx.Customer
         ],
-        "Errors": [
+        Errors: [
           RazorpayEx.Errors.BadRequestError,
           RazorpayEx.Errors.GatewayError,
           RazorpayEx.Errors.ServerError

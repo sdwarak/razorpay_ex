@@ -23,7 +23,7 @@ defmodule RazorpayEx.ClientTest do
   describe "request/4" do
     test "handles successful response" do
       # Use expect/3 without count parameter
-      expect(RazorpayEx.HttpClientMock, :request, fn :get, url, "", headers, opts ->
+      expect(RazorpayEx.HttpClientMock, :request, fn :get, url, "", headers, _opts ->
         # Verify URL
         assert url == "https://api.razorpay.com/v1/payments/pay_test_123"
 
@@ -185,12 +185,10 @@ defmodule RazorpayEx.ClientTest do
     end
 
     test "handles query parameters" do
-      expect(RazorpayEx.HttpClientMock, :request, fn :get, url, _body, _headers, opts ->
-        # Verify URL
-        assert url == "https://api.razorpay.com/v1/payments"
-
-        # Verify params are passed (they're atoms, not strings)
-        assert opts[:params] == %{count: 10, skip: 0}  # Changed from string keys to atom keys
+      expect(RazorpayEx.HttpClientMock, :request, fn :get, url, _body, _headers, _opts ->
+        # Query parameters are encoded into the URL so that repeated keys
+        # (for example `expand[]`) can be expressed.
+        assert url == "https://api.razorpay.com/v1/payments?count=10&skip=0"
 
         {:ok,
         %{

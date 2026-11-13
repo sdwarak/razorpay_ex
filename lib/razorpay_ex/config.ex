@@ -96,12 +96,13 @@ defmodule RazorpayEx.Config do
   @spec set(map()) :: :ok
   def set(config) when is_map(config) do
     # Handle custom_headers specially - merge with existing
-    config = if custom_headers = config[:custom_headers] do
-      existing = Application.get_env(:razorpay_ex, :custom_headers, %{})
-      Map.put(config, :custom_headers, Map.merge(existing, custom_headers))
-    else
-      config
-    end
+    config =
+      if custom_headers = config[:custom_headers] do
+        existing = Application.get_env(:razorpay_ex, :custom_headers, %{})
+        Map.put(config, :custom_headers, Map.merge(existing, custom_headers))
+      else
+        config
+      end
 
     Enum.each(config, fn {key, value} ->
       Application.put_env(:razorpay_ex, key, value)
@@ -228,7 +229,9 @@ defmodule RazorpayEx.Config do
   """
   @spec api_base_url() :: String.t()
   def api_base_url do
-    Application.get_env(:razorpay_ex, :api_base_url) || @default_api_base_url
+    Application.get_env(:razorpay_ex, :api_base_url) ||
+      Application.get_env(:razorpay_ex, :api_url) ||
+      @default_api_base_url
   end
 
   @doc """
@@ -236,7 +239,9 @@ defmodule RazorpayEx.Config do
   """
   @spec auth_base_url() :: String.t()
   def auth_base_url do
-    Application.get_env(:razorpay_ex, :auth_base_url) || @default_auth_base_url
+    Application.get_env(:razorpay_ex, :auth_base_url) ||
+      Application.get_env(:razorpay_ex, :auth_url) ||
+      @default_auth_base_url
   end
 
   @doc """

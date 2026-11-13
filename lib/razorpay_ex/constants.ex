@@ -24,9 +24,6 @@ defmodule RazorpayEx.Constants do
   # HTTP Timeout (default 30 seconds)
   @default_timeout 30_000
 
-  # User Agent
-  @user_agent "razorpay-ex/#{RazorpayEx.version()}"
-
   # Webhook Signature Header
   @webhook_signature_header "x-razorpay-signature"
 
@@ -57,6 +54,38 @@ defmodule RazorpayEx.Constants do
     upi: "upi",
     dispute: "dispute",
     document: "document"
+  }
+
+  # Endpoint collection names. Listed explicitly rather than pluralized at
+  # runtime: spelling out the exceptions (`merchant`, `upi`, `paper_nach`)
+  # keeps the mapping correct without pulling in an inflection dependency.
+  @endpoint_paths %{
+    account: "accounts",
+    customer: "customers",
+    token: "tokens",
+    order: "orders",
+    payment: "payments",
+    settlement: "settlements",
+    fund: "funds",
+    refund: "refunds",
+    invoice: "invoices",
+    plan: "plans",
+    item: "items",
+    subscription: "subscriptions",
+    addon: "addons",
+    payment_link: "payment_links",
+    product_configuration: "product_configurations",
+    smart_collect: "virtual_accounts",
+    virtual_account: "virtual_accounts",
+    stakeholder: "stakeholders",
+    transfer: "transfers",
+    qr_code: "qr_codes",
+    emandate: "emandates",
+    card: "cards",
+    paper_nach: "paper_nachs",
+    upi: "upi",
+    dispute: "disputes",
+    document: "documents"
   }
 
   @doc """
@@ -115,9 +144,11 @@ defmodule RazorpayEx.Constants do
 
   @doc """
   Returns the user agent string.
+
+  Built at runtime so it always carries the loaded application version.
   """
   @spec user_agent() :: String.t()
-  def user_agent, do: @user_agent
+  def user_agent, do: "razorpay-ex/#{RazorpayEx.version()}"
 
   @doc """
   Returns the webhook signature header name.
@@ -154,8 +185,14 @@ defmodule RazorpayEx.Constants do
   """
   @spec endpoint_path(atom()) :: String.t()
   def endpoint_path(resource) do
-    resource
-    |> entity_name()
-    |> Inflex.pluralize()
+    Map.get(@endpoint_paths, resource) || pluralize(entity_name(resource))
+  end
+
+  defp pluralize(name) do
+    cond do
+      String.ends_with?(name, "s") -> name
+      String.ends_with?(name, "y") -> String.replace_suffix(name, "y", "ies")
+      true -> name <> "s"
+    end
   end
 end

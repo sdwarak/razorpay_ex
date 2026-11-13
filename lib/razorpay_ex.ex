@@ -30,29 +30,19 @@ defmodule RazorpayEx do
 
   ## Supported Resources
 
-  This SDK supports all resources from the official Ruby SDK:
+  Implemented resources:
 
-    * Account
-    * Customer
-    * Token
-    * Order
-    * Payment
-    * Refund
-    * Invoice
-    * Plan
-    * Item
-    * Subscription
-    * AddOn
-    * PaymentLink
-    * Card
-    * UPI
-    * QRCode
-    * Dispute
-    * Document
-    * ... and more
+    * `RazorpayEx.Payment`
+    * `RazorpayEx.Order`
+    * `RazorpayEx.Refund`
+    * `RazorpayEx.Customer`
+
+  Anything else can be reached through `RazorpayEx.Client.request/4`, which
+  returns the API payload cast into a struct, keeping unmapped fields in
+  `RazorpayEx.Entity`'s `:extra` map.
   """
 
-  alias RazorpayEx.{Config, Client, Webhook}
+  alias RazorpayEx.{Client, Config, Webhook}
 
   @doc """
   Setup basic authentication - equivalent to Ruby's `Razorpay.setup(key_id, key_secret)`
@@ -72,10 +62,17 @@ defmodule RazorpayEx do
 
   @doc """
   Set custom headers for all requests - equivalent to Ruby's `Razorpay.headers=`
+
+  Headers are merged into any previously configured custom headers and sent
+  with every subsequent request.
+
+  ## Examples
+
+      RazorpayEx.headers(%{"X-Razorpay-Account" => "acc_123"})
   """
   @spec headers(map()) :: :ok
   def headers(custom_headers) when is_map(custom_headers) do
-    Config.set(custom_headers)
+    Config.set(%{custom_headers: custom_headers})
   end
 
   @doc """

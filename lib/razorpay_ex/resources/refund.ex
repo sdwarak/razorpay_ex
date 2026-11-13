@@ -24,7 +24,8 @@ defmodule RazorpayEx.Refund do
           batch_id: String.t() | nil,
           status: String.t() | nil,
           speed_processed: String.t() | nil,
-          speed_requested: String.t() | nil
+          speed_requested: String.t() | nil,
+          extra: map()
         }
 
   defstruct [
@@ -40,7 +41,8 @@ defmodule RazorpayEx.Refund do
     :batch_id,
     :status,
     :speed_processed,
-    :speed_requested
+    :speed_requested,
+    extra: %{}
   ]
 
   @doc """

@@ -14,19 +14,24 @@ defmodule RazorpayEx.Client do
       {:ok, response} = RazorpayEx.Client.request(:post, "/orders", %{amount: 50000}, timeout: 60000)
   """
 
-  alias RazorpayEx.{Config, Constants, Error, Entity, HttpClient}
+  alias RazorpayEx.{Config, Entity, Error, Query}
 
-  @http_client Application.get_env(:razorpay_ex, :http_client, RazorpayEx.HttpAdapter)
-
-  @default_timeout 30_000
-  @default_headers [
-    {"Content-Type", "application/json"},
-    {"User-Agent", "razorpay_ex/#{RazorpayEx.version()}"}
-  ]
+  # Built at runtime: the application version is not available while the
+  # project itself is being compiled.
+  defp default_headers do
+    [
+      {"Content-Type", "application/json"},
+      {"User-Agent", "razorpay_ex/#{RazorpayEx.version()}"}
+    ]
+  end
 
   @type http_method :: :get | :post | :put | :patch | :delete
   @type request_options :: keyword()
-  @type response :: {:ok, map() | list()} | {:error, Error.t()}
+  @type response :: {:ok, struct() | list() | map()} | {:error, Error.t()}
+
+  defp http_client do
+    Application.get_env(:razorpay_ex, :http_client, RazorpayEx.HttpAdapter)
+  end
 
   @doc """
   Makes an HTTP request to the RazorpayEx API.
@@ -40,9 +45,11 @@ defmodule RazorpayEx.Client do
 
   ## Options
 
-    - `:timeout` - Request timeout in milliseconds (default: 30000)
+    - `:timeout` - Request timeout in milliseconds. Defaults to the
+      `:timeout` application setting, which is 30 seconds when unset
     - `:headers` - Additional HTTP headers
-    - `:params` - Query parameters (for GET requests)
+    - `:params` - Query parameters. List values are sent as repeated `key[]`
+      parameters, and `:expand` is always sent as `expand[]`
     - `:host` - API host (`:api` or `:auth`)
 
   ## Examples
@@ -55,33 +62,18 @@ defmodule RazorpayEx.Client do
 
       # With query parameters
       {:ok, payments} = RazorpayEx.Client.request(:get, "/payments", %{}, params: %{count: 10})
-  """ # This needs to be updated to use runtime configuration
 
-
-  defp http_client do
-    Application.get_env(:razorpay_ex, :http_client, RazorpayEx.HttpAdapter)
-  end
-
+      # Expanding nested entities
+      {:ok, payment} = RazorpayEx.Client.request(:get, "/payments/pay_123", %{}, params: %{expand: ["card"]})
+  """
   @spec request(http_method, String.t(), map(), request_options()) :: response()
   def request(method, path, data \\ %{}, opts \\ []) do
-    url = build_url(path, opts)
-    headers = build_headers(opts)
-    body = encode_body(data, method)
-    query_params = Keyword.get(opts, :params, %{})
-
-    options = [
-      timeout: Keyword.get(opts, :timeout, @default_timeout),
-      recv_timeout: Keyword.get(opts, :timeout, @default_timeout),
-      params: query_params
-    ]
-
-    # Use http_client/0 function instead of @http_client
-    case http_client().request(method, url, body, headers, options) do
-      {:ok, %{status_code: status, body: body, headers: _headers}} ->
+    case raw_request(method, path, data, opts) do
+      {:ok, %{status_code: status, body: body}} ->
         handle_response(status, body)
 
-      {:error, _error} ->
-        {:error, Error.new(:network_error, "HTTP request failed")}
+      {:error, %Error{} = error} ->
+        {:error, error}
     end
   end
 
@@ -95,21 +87,16 @@ defmodule RazorpayEx.Client do
       {:ok, response} =
         RazorpayEx.Client.raw_request(:get, "/payments/pay_123")
   """
-   @spec raw_request(http_method, String.t(), map(), request_options()) ::
-    {:ok, map()} | {:error, Error.t()}
+  @spec raw_request(http_method, String.t(), map(), request_options()) ::
+          {:ok, map()} | {:error, Error.t()}
   def raw_request(method, path, data \\ %{}, opts \\ []) do
-    url = build_url(path, opts)
+    url = build_url(path, opts) |> append_query(Keyword.get(opts, :params, %{}))
     headers = build_headers(opts)
     body = encode_body(data, method)
-    query_params = Keyword.get(opts, :params, %{})
 
-    options = [
-      timeout: Keyword.get(opts, :timeout, @default_timeout),
-      recv_timeout: Keyword.get(opts, :timeout, @default_timeout),
-      params: query_params
-    ]
+    timeout = Keyword.get(opts, :timeout, Config.timeout())
+    options = [timeout: timeout, recv_timeout: timeout]
 
-    # Use http_client/0 function instead of @http_client
     case http_client().request(method, url, body, headers, options) do
       {:ok, response} ->
         {:ok, response}
@@ -128,7 +115,19 @@ defmodule RazorpayEx.Client do
         _ -> Config.api_base_url()
       end
 
-    base_url <> path
+    base_url
+    |> String.trim_trailing("/")
+    |> Kernel.<>(normalize_path(path))
+  end
+
+  defp normalize_path("/" <> _rest = path), do: path
+  defp normalize_path(path), do: "/" <> path
+
+  defp append_query(url, params) do
+    case Query.encode(params) do
+      "" -> url
+      query -> url <> if(String.contains?(url, "?"), do: "&", else: "?") <> query
+    end
   end
 
   defp build_headers(opts) do
@@ -136,25 +135,19 @@ defmodule RazorpayEx.Client do
     config_headers = Config.custom_headers()
     auth_header = build_auth_header()
 
-    # Convert config headers map to list of tuples with lowercased keys
-    config_header_list =
-      Enum.map(config_headers, fn {k, v} ->
-        {String.downcase(to_string(k)), to_string(v)}
-      end)
+    normalize = fn headers ->
+      Enum.map(headers, fn {k, v} -> {String.downcase(to_string(k)), to_string(v)} end)
+    end
 
-    # Convert custom_headers to have string keys
-    custom_headers_normalized =
-      Enum.map(custom_headers, fn {k, v} ->
-        {String.downcase(to_string(k)), to_string(v)}
-      end)
-
-    # Start with default headers
-    @default_headers
-    |> Enum.map(fn {k, v} -> {String.downcase(to_string(k)), to_string(v)} end)
-    |> Kernel.++(config_header_list)
-    |> Kernel.++(custom_headers_normalized)
-    |> Kernel.++([{"authorization", auth_header}])
+    # Later headers win: request headers override configured headers, which
+    # override the defaults. The authorization header is always applied last.
+    (normalize.(default_headers()) ++
+       normalize.(config_headers) ++
+       normalize.(custom_headers) ++
+       [{"authorization", auth_header}])
+    |> Enum.reverse()
     |> Enum.uniq_by(fn {k, _v} -> k end)
+    |> Enum.reverse()
   end
 
   defp build_auth_header do
@@ -212,6 +205,16 @@ defmodule RazorpayEx.Client do
     end
   end
 
+  # Razorpay list endpoints return `{"entity": "collection", "count": N, "items": [...]}`.
+  # The caller gets the list of items; `count` is always the number of items
+  # returned for the current page, so it carries no extra information.
+  defp transform_response(%{"entity" => "collection"} = collection) do
+    collection
+    |> Map.get("items", [])
+    |> List.wrap()
+    |> Enum.map(&transform_entity/1)
+  end
+
   defp transform_response(response) when is_list(response) do
     Enum.map(response, &transform_entity/1)
   end
@@ -222,33 +225,9 @@ defmodule RazorpayEx.Client do
 
   defp transform_response(response), do: response
 
-  defp transform_entity(%{"entity" => entity_type} = data) do
-    module_name = entity_type
-      |> String.split("_")
-      |> Enum.map(&String.capitalize/1)
-      |> Enum.join("")
-
-    try do
-      module = Module.safe_concat([RazorpayEx, module_name])
-      struct(module, to_existing_atom_keys(data))
-    rescue
-      ArgumentError ->
-        struct(Entity, to_existing_atom_keys(data))
-    end
+  defp transform_entity(%{"entity" => entity_type} = data) when is_binary(entity_type) do
+    Entity.cast(Entity.module_for(entity_type), data)
   end
 
-  defp transform_entity(data) do
-    data
-  end
-
-  defp to_existing_atom_keys(map) do
-    Map.new(map, fn {key, val} ->
-      try do
-        {String.to_existing_atom(key), val}
-      rescue
-        ArgumentError -> {key, val}
-      end
-    end)
-  end
-
+  defp transform_entity(data), do: data
 end
