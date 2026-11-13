@@ -49,12 +49,12 @@ defmodule RazorpayEx.ClientTest do
 
       assert {:ok, payment} = RazorpayEx.Client.request(:get, "/payments/pay_test_123")
       assert payment.id == "pay_test_123"
-      assert payment.amount == 50000
+      assert payment.amount == 50_000
       assert payment.entity == "payment"
     end
 
     test "handles POST request" do
-      order_data = %{amount: 50000, currency: "INR", receipt: "test_123"}
+      order_data = %{amount: 50_000, currency: "INR", receipt: "test_123"}
 
       expect(RazorpayEx.HttpClientMock, :request, fn :post, url, body, _headers, _opts ->
         # Verify URL
@@ -62,10 +62,10 @@ defmodule RazorpayEx.ClientTest do
 
         # Verify JSON body
         assert Jason.decode!(body) == %{
-          "amount" => 50000,
-          "currency" => "INR",
-          "receipt" => "test_123"
-        }
+                 "amount" => 50_000,
+                 "currency" => "INR",
+                 "receipt" => "test_123"
+               }
 
         {:ok,
          %{
@@ -86,7 +86,7 @@ defmodule RazorpayEx.ClientTest do
 
       assert {:ok, order} = RazorpayEx.Client.request(:post, "/orders", order_data)
       assert order.id == "order_test_456"
-      assert order.amount == 50000
+      assert order.amount == 50_000
       assert order.entity == "order"
     end
 
@@ -125,6 +125,7 @@ defmodule RazorpayEx.ClientTest do
         # Verify Basic Auth header is present
         assert {"authorization", "Basic " <> auth} =
                  List.keyfind(headers, "authorization", 0)
+
         assert Base.decode64!(auth) == "test_key_id:test_key_secret"
 
         {:ok,
@@ -168,11 +169,11 @@ defmodule RazorpayEx.ClientTest do
         assert {"x-another-header", "another_value"} in headers
 
         {:ok,
-        %{
-          status_code: 200,
-          body: "{}",
-          headers: [{"content-type", "application/json"}]
-        }}
+         %{
+           status_code: 200,
+           body: "{}",
+           headers: [{"content-type", "application/json"}]
+         }}
       end)
 
       # Configure custom headers
@@ -191,14 +192,15 @@ defmodule RazorpayEx.ClientTest do
         assert url == "https://api.razorpay.com/v1/payments?count=10&skip=0"
 
         {:ok,
-        %{
-          status_code: 200,
-          body: "[]",
-          headers: [{"content-type", "application/json"}]
-        }}
+         %{
+           status_code: 200,
+           body: "[]",
+           headers: [{"content-type", "application/json"}]
+         }}
       end)
 
-      assert {:ok, []} = RazorpayEx.Client.request(:get, "/payments", %{}, params: %{count: 10, skip: 0})
+      assert {:ok, []} =
+               RazorpayEx.Client.request(:get, "/payments", %{}, params: %{count: 10, skip: 0})
     end
 
     test "returns empty map for empty response body" do

@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0] - 2026-11-13
+
+### Added
+- `RazorpayEx.Utility` for verifying Razorpay signatures: `verify_payment_signature/1..4` (Checkout payment callbacks), `verify_subscription_signature/3,4`, `verify_payment_link_signature/4,5` and `verify_webhook_signature/3`. Checkout callback verification was previously not possible without hand-rolling the HMAC. All functions return a boolean and never raise on a bad signature
+- `RazorpayEx.Paginator.all/3`, which walks `count`/`skip` pages until the last short page, with a `:max_pages` guard that returns an error instead of silently truncating
+- Opt-in retries on `RazorpayEx.Client.request/4` (`retry:`, `retry_delay:`). Transport errors, 408, 409, 429 and 5xx are retried with exponential backoff, honouring `Retry-After`. Retries are off by default because repeating a non-idempotent request can duplicate work
+- `:idempotency_key` option on `RazorpayEx.Refund.create/3`, sent as `X-Refund-Idempotency`
+- `RazorpayEx.Config.enable_logging/0` now actually logs each request (method, path, status, duration) at debug level. Query strings, headers and bodies are never logged
+- Continuous integration: tests on Elixir 1.17/OTP 27 and Elixir 1.19/OTP 28, plus formatting, credo, retired-package and OSV advisory checks
+- `scripts/osv_scan.sh`, which scans `mix.lock` against the OSV advisory database
+
+### Changed
+- Webhook signature comparison now goes through the same internal constant-time helper as the new verification functions; behaviour is unchanged
+- Test-only dependencies updated (`cowboy`, `cowlib`, `plug`, `plug_cowboy`, `plug_crypto`), clearing the remaining advisories in the lockfile
+
 ## [0.3.0] - 2026-11-13
 
 ### Breaking changes

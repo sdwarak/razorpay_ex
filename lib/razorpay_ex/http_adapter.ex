@@ -12,11 +12,12 @@ defmodule RazorpayEx.HttpAdapter do
   end
 
   defp normalize_response({:ok, %HTTPoison.Response{} = response}) do
-    {:ok, %{
-      status_code: response.status_code,
-      body: response.body,
-      headers: response.headers
-    }}
+    {:ok,
+     %{
+       status_code: response.status_code,
+       body: response.body,
+       headers: response.headers
+     }}
   end
 
   defp normalize_response({:error, %HTTPoison.Error{} = error}) do

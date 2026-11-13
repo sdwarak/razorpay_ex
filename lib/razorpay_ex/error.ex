@@ -128,6 +128,14 @@ defmodule RazorpayEx.Error do
     }
   end
 
+  def new(code, description, status_code) when is_atom(code) do
+    %__MODULE__{
+      code: code |> Atom.to_string() |> String.upcase(),
+      description: description,
+      http_status_code: status_code
+    }
+  end
+
   def new(code, description, status_code) when is_binary(code) do
     %__MODULE__{
       code: code,

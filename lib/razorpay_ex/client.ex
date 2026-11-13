@@ -16,6 +16,11 @@ defmodule RazorpayEx.Client do
 
   alias RazorpayEx.{Config, Entity, Error, Query}
 
+  require Logger
+
+  @default_retry_delay 100
+  @max_retry_delay 5_000
+
   # Built at runtime: the application version is not available while the
   # project itself is being compiled.
   defp default_headers do
@@ -95,18 +100,95 @@ defmodule RazorpayEx.Client do
     body = encode_body(data, method)
 
     timeout = Keyword.get(opts, :timeout, Config.timeout())
-    options = [timeout: timeout, recv_timeout: timeout]
 
-    case http_client().request(method, url, body, headers, options) do
-      {:ok, response} ->
-        {:ok, response}
+    transport = %{
+      method: method,
+      url: url,
+      body: body,
+      headers: headers,
+      options: [timeout: timeout, recv_timeout: timeout]
+    }
 
-      {:error, _error} ->
-        {:error, Error.new(:network_error, "HTTP request failed")}
+    transport
+    |> attempt(Keyword.get(opts, :retry, 0), Keyword.get(opts, :retry_delay, @default_retry_delay))
+    |> case do
+      {:ok, response} -> {:ok, response}
+      {:error, _reason} -> {:error, Error.new(:network_error, "HTTP request failed")}
     end
   end
 
   # Private functions
+
+  # A request is retried only when the caller opted in with `retry: n`. Retrying
+  # a non-idempotent request without an idempotency key can duplicate work, so
+  # the default stays at zero.
+  defp attempt(transport, retries_left, delay) when retries_left >= 0 do
+    started = System.monotonic_time(:millisecond)
+    result = perform(transport)
+    log_request(transport, result, System.monotonic_time(:millisecond) - started)
+
+    if retries_left > 0 and retryable?(result) do
+      Process.sleep(retry_delay(result, delay))
+      attempt(transport, retries_left - 1, min(delay * 2, @max_retry_delay))
+    else
+      result
+    end
+  end
+
+  defp perform(transport) do
+    http_client().request(
+      transport.method,
+      transport.url,
+      transport.body,
+      transport.headers,
+      transport.options
+    )
+  end
+
+  defp retryable?({:error, _reason}), do: true
+  defp retryable?({:ok, %{status_code: status}}), do: status in [408, 409, 429] or status >= 500
+  defp retryable?(_result), do: false
+
+  # Honour `retry-after` when the server sends it; otherwise back off
+  # exponentially with a little jitter so parallel callers do not sync up.
+  defp retry_delay({:ok, %{headers: headers}}, fallback) when is_list(headers) do
+    case List.keyfind(headers, "retry-after", 0) do
+      {_key, value} when is_binary(value) ->
+        case Integer.parse(value) do
+          {seconds, ""} -> min(seconds * 1_000, @max_retry_delay)
+          _ -> fallback + jitter()
+        end
+
+      _ ->
+        fallback + jitter()
+    end
+  end
+
+  defp retry_delay(_result, fallback), do: fallback + jitter()
+
+  defp jitter, do: :rand.uniform(50)
+
+  # Logs method, path and outcome only. Query strings, headers and bodies are
+  # deliberately excluded: they can carry customer data and credentials.
+  defp log_request(transport, result, duration_ms) do
+    if Config.enable_logging() do
+      path = transport.url |> URI.parse() |> Map.get(:path)
+
+      outcome =
+        case result do
+          {:ok, %{status_code: status}} -> Integer.to_string(status)
+          {:error, reason} -> "error #{inspect(reason)}"
+        end
+
+      method = transport.method |> to_string() |> String.upcase()
+
+      Logger.debug(fn ->
+        "razorpay_ex #{method} #{path} -> #{outcome} (#{duration_ms}ms)"
+      end)
+    end
+
+    :ok
+  end
 
   defp build_url(path, opts) do
     base_url =

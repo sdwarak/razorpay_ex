@@ -63,6 +63,14 @@ defmodule RazorpayEx.Refund do
     - `receipt`: Your refund receipt ID
     - `speed`: Refund speed ("normal", "optimum")
 
+  ## Options
+
+    - `:idempotency_key` - sent as `X-Refund-Idempotency`. Razorpay requires at
+      least 10 characters (letters, digits, hyphens and underscores). Reuse the
+      same key when retrying so a refund is never created twice
+    - `:retry` - number of transport retries (only safe together with an
+      idempotency key)
+
   ## Examples
 
       # Full refund
@@ -77,9 +85,9 @@ defmodule RazorpayEx.Refund do
         speed: "optimum"
       })
   """
-  @spec create(String.t(), map()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
-  def create(payment_id, params) do
-    Client.request(:post, "/payments/#{payment_id}/refund", params)
+  @spec create(String.t(), map(), keyword()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
+  def create(payment_id, params, opts \\ []) do
+    Client.request(:post, "/payments/#{payment_id}/refund", params, idempotency_opts(opts))
   end
 
   @doc """
@@ -133,5 +141,18 @@ defmodule RazorpayEx.Refund do
   @spec for_payment(String.t(), map()) :: {:ok, list(t())} | {:error, RazorpayEx.Error.t()}
   def for_payment(payment_id, params \\ %{}) do
     Client.request(:get, "/payments/#{payment_id}/refunds", %{}, params: params)
+  end
+
+  # Razorpay scopes idempotency per endpoint, and refunds use their own header.
+  defp idempotency_opts(opts) do
+    case Keyword.pop(opts, :idempotency_key) do
+      {nil, opts} ->
+        opts
+
+      {key, opts} ->
+        header = {"X-Refund-Idempotency", to_string(key)}
+        existing = Keyword.get(opts, :headers, [])
+        Keyword.put(opts, :headers, [header | List.wrap(existing)])
+    end
   end
 end

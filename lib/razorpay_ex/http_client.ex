@@ -11,8 +11,8 @@ defmodule RazorpayEx.HttpClient do
   @type options :: keyword()
 
   @type response ::
-    {:ok, %{status_code: integer(), body: String.t(), headers: list()}} |
-    {:error, %{reason: any()}}
+          {:ok, %{status_code: integer(), body: String.t(), headers: list()}}
+          | {:error, %{reason: any()}}
 
   @callback request(method, url, body, headers, options) :: response
 end

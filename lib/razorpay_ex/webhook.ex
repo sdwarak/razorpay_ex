@@ -24,6 +24,8 @@ defmodule RazorpayEx.Webhook do
   Always verify webhook signatures in production to prevent unauthorized requests.
   """
 
+  alias RazorpayEx.Signature
+
   @doc """
   Verifies a webhook signature.
 
@@ -55,7 +57,7 @@ defmodule RazorpayEx.Webhook do
     # comparison timing reveals nothing about the original signature values.
     byte_size(a) == byte_size(b) and
       :crypto.mac(:hmac, :sha256, a, "secure_compare") ==
-      :crypto.mac(:hmac, :sha256, b, "secure_compare")
+        :crypto.mac(:hmac, :sha256, b, "secure_compare")
   end
 
   @doc """
@@ -76,8 +78,7 @@ defmodule RazorpayEx.Webhook do
   """
   @spec generate_signature(String.t(), String.t()) :: String.t()
   def generate_signature(payload, secret) do
-    :crypto.mac(:hmac, :sha256, secret, payload)
-    |> Base.encode16(case: :lower)
+    Signature.hmac_sha256(payload, secret)
   end
 
   @doc """

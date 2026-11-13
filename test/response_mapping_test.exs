@@ -11,6 +11,7 @@ defmodule RazorpayEx.ResponseMappingTest do
   import Mox
 
   alias RazorpayEx.{Client, Config, Customer, Entity, Error, Order, Payment, Query, Refund}
+  alias RazorpayEx.Errors.{BadRequestError, GatewayError, ServerError}
 
   setup :verify_on_exit!
 
@@ -152,14 +153,11 @@ defmodule RazorpayEx.ResponseMappingTest do
     end
 
     test "the optional exception modules are available" do
-      assert %RazorpayEx.Errors.GatewayError{code: "GATEWAY_ERROR"} =
-               RazorpayEx.Errors.GatewayError.exception(description: "Down")
+      assert %GatewayError{code: "GATEWAY_ERROR"} = GatewayError.exception(description: "Down")
 
-      assert %RazorpayEx.Errors.BadRequestError{http_status_code: 400} =
-               RazorpayEx.Errors.BadRequestError.exception(description: "Bad")
+      assert %BadRequestError{http_status_code: 400} = BadRequestError.exception(description: "Bad")
 
-      assert %RazorpayEx.Errors.ServerError{http_status_code: 500} =
-               RazorpayEx.Errors.ServerError.exception(description: "Oops")
+      assert %ServerError{http_status_code: 500} = ServerError.exception(description: "Oops")
     end
   end
 
