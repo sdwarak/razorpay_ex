@@ -26,10 +26,18 @@ by adding `razorpay_ex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:razorpay_ex, "~> 0.1.2"}
+    {:razorpay_ex, "~> 0.2.0"}
   ]
 end
 ```
+
+### Requirements
+
+- Elixir 1.17 or later
+- Erlang/OTP 27 or later
+
+These are the minimum versions supported by `httpoison` 3.x and its `hackney`
+4.x HTTP backend.
 
 License
 MIT License - see LICENSE file for details.

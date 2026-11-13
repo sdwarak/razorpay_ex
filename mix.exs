@@ -1,7 +1,7 @@
 defmodule RazorpayEx.MixProject do
   use Mix.Project
 
-  @version "0.1.3"
+  @version "0.2.0"
   @source_url "https://github.com/sdwarak/razorpay_ex"
   @description "Elixir client for RazorpayEx API - Unofficial library for RazorpayEx payment gateway"
 
@@ -9,7 +9,8 @@ defmodule RazorpayEx.MixProject do
     [
       app: :razorpay_ex,
       version: @version,
-      elixir: "~> 1.11",
+      elixir: "~> 1.17",
+      erlang: ">= 27.0",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       description: @description,
@@ -35,7 +36,7 @@ defmodule RazorpayEx.MixProject do
 
   defp deps do
     [
-      {:httpoison, "~> 1.8 or ~> 2.0"},
+      {:httpoison, "~> 3.0"},
       {:jason, "~> 1.2"},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
