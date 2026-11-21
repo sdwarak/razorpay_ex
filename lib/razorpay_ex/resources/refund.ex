@@ -86,9 +86,20 @@ defmodule RazorpayEx.Refund do
       })
   """
   @spec create(String.t(), map(), keyword()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
-  def create(payment_id, params, opts \\ []) do
-    Client.request(:post, "/payments/#{payment_id}/refund", params, idempotency_opts(opts))
+  def create(payment_id, params, opts \\ [])
+
+  def create(payment_id, params, opts)
+      when is_binary(payment_id) and payment_id != "" do
+    Client.request(
+      :post,
+      "/payments/#{URI.encode_www_form(payment_id)}/refund",
+      params,
+      idempotency_opts(opts)
+    )
   end
+
+  def create(_payment_id, _params, _opts),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid payment ID", 400)}
 
   @doc """
   Fetches a refund by ID.
@@ -102,9 +113,11 @@ defmodule RazorpayEx.Refund do
       {:ok, refund} = RazorpayEx.Refund.fetch("rfnd_9A33XWu170gUtm")
   """
   @spec fetch(String.t()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
-  def fetch(id) do
-    Client.request(:get, "/refunds/#{id}")
+  def fetch(id) when is_binary(id) and id != "" do
+    Client.request(:get, "/refunds/#{URI.encode_www_form(id)}")
   end
+
+  def fetch(_id), do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid refund ID", 400)}
 
   @doc """
   Lists all refunds with optional filters.
@@ -139,9 +152,20 @@ defmodule RazorpayEx.Refund do
       {:ok, refunds} = RazorpayEx.Refund.for_payment("pay_29QQoUBi66xm2f")
   """
   @spec for_payment(String.t(), map()) :: {:ok, list(t())} | {:error, RazorpayEx.Error.t()}
-  def for_payment(payment_id, params \\ %{}) do
-    Client.request(:get, "/payments/#{payment_id}/refunds", %{}, params: params)
+  def for_payment(payment_id, params \\ %{})
+
+  def for_payment(payment_id, params)
+      when is_binary(payment_id) and payment_id != "" do
+    Client.request(
+      :get,
+      "/payments/#{URI.encode_www_form(payment_id)}/refunds",
+      %{},
+      params: params
+    )
   end
+
+  def for_payment(_payment_id, _params),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid payment ID", 400)}
 
   # Razorpay scopes idempotency per endpoint, and refunds use their own header.
   defp idempotency_opts(opts) do

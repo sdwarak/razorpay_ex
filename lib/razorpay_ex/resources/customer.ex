@@ -81,9 +81,11 @@ defmodule RazorpayEx.Customer do
       {:ok, customer} = RazorpayEx.Customer.fetch("cust_9A33XWu170gUtm")
   """
   @spec fetch(String.t()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
-  def fetch(id) do
-    Client.request(:get, "/customers/#{id}")
+  def fetch(id) when is_binary(id) and id != "" do
+    Client.request(:get, "/customers/#{URI.encode_www_form(id)}")
   end
+
+  def fetch(_id), do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid customer ID", 400)}
 
   @doc """
   Updates a customer.
@@ -102,9 +104,12 @@ defmodule RazorpayEx.Customer do
       })
   """
   @spec update(String.t(), map()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
-  def update(id, params) do
-    Client.request(:put, "/customers/#{id}", params)
+  def update(id, params) when is_binary(id) and id != "" do
+    Client.request(:put, "/customers/#{URI.encode_www_form(id)}", params)
   end
+
+  def update(_id, _params),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid customer ID", 400)}
 
   @doc """
   Lists all customers with optional filters.

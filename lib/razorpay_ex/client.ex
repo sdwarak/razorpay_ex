@@ -215,30 +215,35 @@ defmodule RazorpayEx.Client do
   defp build_headers(opts) do
     custom_headers = Keyword.get(opts, :headers, [])
     config_headers = Config.custom_headers()
-    auth_header = build_auth_header()
+    auth_header = build_auth_header(opts)
 
     normalize = fn headers ->
       Enum.map(headers, fn {k, v} -> {String.downcase(to_string(k)), to_string(v)} end)
     end
 
     # Later headers win: request headers override configured headers, which
-    # override the defaults. The authorization header is always applied last.
+    # override the defaults. The authorization header can be customized per request.
     (normalize.(default_headers()) ++
        normalize.(config_headers) ++
-       normalize.(custom_headers) ++
-       [{"authorization", auth_header}])
+       [{"authorization", auth_header}] ++
+       normalize.(custom_headers))
     |> Enum.reverse()
     |> Enum.uniq_by(fn {k, _v} -> k end)
     |> Enum.reverse()
   end
 
-  defp build_auth_header do
-    case Config.auth_type() do
+  defp build_auth_header(opts) do
+    auth_type = Keyword.get(opts, :auth_type, Config.auth_type())
+
+    case auth_type do
       :oauth ->
-        "Bearer #{Config.access_token()}"
+        token = Keyword.get(opts, :access_token) || Config.access_token()
+        "Bearer #{token}"
 
       _ ->
-        auth = Base.encode64("#{Config.key_id()}:#{Config.key_secret()}")
+        key_id = Keyword.get(opts, :key_id) || Config.key_id()
+        key_secret = Keyword.get(opts, :key_secret) || Config.key_secret()
+        auth = Base.encode64("#{key_id}:#{key_secret}")
         "Basic #{auth}"
     end
   end

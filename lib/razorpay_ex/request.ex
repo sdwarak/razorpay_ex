@@ -43,9 +43,15 @@ defmodule RazorpayEx.Request do
   Fetches an entity by ID.
   """
   @spec fetch(atom(), String.t(), keyword()) :: Client.response()
-  def fetch(resource_type, id, opts \\ []) do
+  def fetch(resource_type, id, opts \\ [])
+
+  def fetch(resource_type, id, opts)
+      when is_binary(id) and id != "" and is_atom(resource_type) do
     request(:get, resource_path(resource_type, id), %{}, opts)
   end
+
+  def fetch(_resource_type, _id, _opts),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid resource ID or type", 400)}
 
   @doc """
   Lists entities, optionally filtered.
@@ -67,25 +73,43 @@ defmodule RazorpayEx.Request do
   Updates an entity.
   """
   @spec update(atom(), String.t(), map(), keyword()) :: Client.response()
-  def update(resource_type, id, data, opts \\ []) do
+  def update(resource_type, id, data, opts \\ [])
+
+  def update(resource_type, id, data, opts)
+      when is_binary(id) and id != "" and is_atom(resource_type) do
     request(:put, resource_path(resource_type, id), data, opts)
   end
+
+  def update(_resource_type, _id, _data, _opts),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid resource ID or type", 400)}
 
   @doc """
   Patches an entity (partial update).
   """
   @spec patch(atom(), String.t(), map(), keyword()) :: Client.response()
-  def patch(resource_type, id, data, opts \\ []) do
+  def patch(resource_type, id, data, opts \\ [])
+
+  def patch(resource_type, id, data, opts)
+      when is_binary(id) and id != "" and is_atom(resource_type) do
     request(:patch, resource_path(resource_type, id), data, opts)
   end
+
+  def patch(_resource_type, _id, _data, _opts),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid resource ID or type", 400)}
 
   @doc """
   Deletes an entity.
   """
   @spec delete(atom(), String.t(), keyword()) :: Client.response()
-  def delete(resource_type, id, opts \\ []) do
+  def delete(resource_type, id, opts \\ [])
+
+  def delete(resource_type, id, opts)
+      when is_binary(id) and id != "" and is_atom(resource_type) do
     request(:delete, resource_path(resource_type, id), %{}, opts)
   end
+
+  def delete(_resource_type, _id, _opts),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid resource ID or type", 400)}
 
   @doc """
   Makes a GET request against a sub-path of a resource.
@@ -107,6 +131,6 @@ defmodule RazorpayEx.Request do
   defp resource_path(resource_type, suffix \\ nil) do
     path = "/" <> Constants.endpoint_path(resource_type)
 
-    if suffix, do: path <> "/" <> to_string(suffix), else: path
+    if suffix, do: path <> "/" <> URI.encode_www_form(to_string(suffix)), else: path
   end
 end

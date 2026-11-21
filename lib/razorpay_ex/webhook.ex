@@ -32,33 +32,29 @@ defmodule RazorpayEx.Webhook do
   ## Parameters
 
     - `payload`: Raw webhook payload body
-    - `signature`: The `x-razorpay-signature` header value
+    - `signature`: The `x-razorpay-signature` header value (string or header list)
     - `secret`: Your webhook secret from Razorpay dashboard
 
   ## Returns
 
     - `true` if signature is valid
-    - `false` if signature is invalid
+    - `false` if signature is invalid or any parameter is invalid/missing
 
   ## Examples
 
       # Verify signature
       RazorpayEx.Webhook.verify(payload, signature, "webhook_secret_123")
   """
-  @spec verify(String.t(), String.t(), String.t()) :: boolean()
-  def verify(payload, signature, secret) do
-    expected_signature = generate_signature(payload, secret)
-    secure_compare(expected_signature, signature)
+  @spec verify(String.t(), String.t() | list(String.t()) | nil, String.t()) :: boolean()
+  def verify(payload, [signature | _], secret) when is_binary(signature),
+    do: verify(payload, signature, secret)
+
+  def verify(payload, signature, secret)
+      when is_binary(payload) and is_binary(signature) and is_binary(secret) do
+    Signature.valid?(generate_signature(payload, secret), signature)
   end
 
-  defp secure_compare(a, b) do
-    # Constant-time comparison via HMAC to prevent timing side-channel attacks
-    # Comparing HMACs of both inputs with a fixed key is safe because the leaked
-    # comparison timing reveals nothing about the original signature values.
-    byte_size(a) == byte_size(b) and
-      :crypto.mac(:hmac, :sha256, a, "secure_compare") ==
-        :crypto.mac(:hmac, :sha256, b, "secure_compare")
-  end
+  def verify(_payload, _signature, _secret), do: false
 
   @doc """
   Generates a webhook signature for a payload.
@@ -98,15 +94,25 @@ defmodule RazorpayEx.Webhook do
   """
   @spec extract_signature(map() | keyword()) :: String.t() | nil
   def extract_signature(headers) when is_map(headers) do
-    headers["x-razorpay-signature"]
+    Enum.find_value(headers, fn {k, v} -> match_signature_header(k, v) end)
   end
 
   def extract_signature(headers) when is_list(headers) do
-    headers
-    |> Enum.find(fn {k, _} -> String.downcase(k) == "x-razorpay-signature" end)
-    |> case do
-      {_, value} -> value
-      nil -> nil
+    Enum.find_value(headers, fn
+      {k, v} -> match_signature_header(k, v)
+      _ -> nil
+    end)
+  end
+
+  def extract_signature(_headers), do: nil
+
+  defp match_signature_header(key, value) do
+    if String.downcase(to_string(key)) == "x-razorpay-signature" do
+      unwrap_header_value(value)
     end
   end
+
+  defp unwrap_header_value([first | _]) when is_binary(first), do: first
+  defp unwrap_header_value(value) when is_binary(value), do: value
+  defp unwrap_header_value(_), do: nil
 end

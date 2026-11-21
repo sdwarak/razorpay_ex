@@ -83,9 +83,11 @@ defmodule RazorpayEx.Payment do
       {:ok, payment} = RazorpayEx.Payment.fetch("pay_29QQoUBi66xm2f")
   """
   @spec fetch(String.t()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
-  def fetch(id) do
-    Client.request(:get, "/payments/#{id}")
+  def fetch(id) when is_binary(id) and id != "" do
+    Client.request(:get, "/payments/#{URI.encode_www_form(id)}")
   end
+
+  def fetch(_id), do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid payment ID", 400)}
 
   @doc """
   Lists all payments with optional filters.
@@ -124,9 +126,12 @@ defmodule RazorpayEx.Payment do
       {:ok, payment} = RazorpayEx.Payment.capture("pay_29QQoUBi66xm2f", 25000)
   """
   @spec capture(String.t(), integer()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
-  def capture(id, amount) do
-    Client.request(:post, "/payments/#{id}/capture", %{amount: amount})
+  def capture(id, amount) when is_binary(id) and id != "" do
+    Client.request(:post, "/payments/#{URI.encode_www_form(id)}/capture", %{amount: amount})
   end
+
+  def capture(_id, _amount),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid payment ID", 400)}
 
   @doc """
   Gets card details for a payment.
@@ -140,9 +145,11 @@ defmodule RazorpayEx.Payment do
       {:ok, card_details} = RazorpayEx.Payment.card("pay_29QQoUBi66xm2f")
   """
   @spec card(String.t()) :: {:ok, map()} | {:error, RazorpayEx.Error.t()}
-  def card(id) do
-    Client.request(:get, "/payments/#{id}/card")
+  def card(id) when is_binary(id) and id != "" do
+    Client.request(:get, "/payments/#{URI.encode_www_form(id)}/card")
   end
+
+  def card(_id), do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid payment ID", 400)}
 
   @doc """
   Gets bank transfer details for a payment.
@@ -156,9 +163,12 @@ defmodule RazorpayEx.Payment do
       {:ok, bank_transfer} = RazorpayEx.Payment.bank_transfer("pay_29QQoUBi66xm2f")
   """
   @spec bank_transfer(String.t()) :: {:ok, map()} | {:error, RazorpayEx.Error.t()}
-  def bank_transfer(id) do
-    Client.request(:get, "/payments/#{id}/bank_transfer")
+  def bank_transfer(id) when is_binary(id) and id != "" do
+    Client.request(:get, "/payments/#{URI.encode_www_form(id)}/bank_transfer")
   end
+
+  def bank_transfer(_id),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid payment ID", 400)}
 
   @doc """
   Refreshes payment status.
@@ -172,9 +182,11 @@ defmodule RazorpayEx.Payment do
       {:ok, payment} = RazorpayEx.Payment.refresh("pay_29QQoUBi66xm2f")
   """
   @spec refresh(String.t()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
-  def refresh(id) do
-    Client.request(:post, "/payments/#{id}/refresh", %{})
+  def refresh(id) when is_binary(id) and id != "" do
+    Client.request(:post, "/payments/#{URI.encode_www_form(id)}/refresh", %{})
   end
+
+  def refresh(_id), do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid payment ID", 400)}
 
   @doc """
   Updates payment details.
@@ -191,7 +203,10 @@ defmodule RazorpayEx.Payment do
       })
   """
   @spec update(String.t(), map()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
-  def update(id, params) do
-    Client.request(:patch, "/payments/#{id}", params)
+  def update(id, params) when is_binary(id) and id != "" do
+    Client.request(:patch, "/payments/#{URI.encode_www_form(id)}", params)
   end
+
+  def update(_id, _params),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid payment ID", 400)}
 end

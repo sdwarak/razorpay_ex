@@ -48,6 +48,7 @@ defmodule RazorpayEx.Config do
           enable_logging: boolean()
         }
 
+  @derive {Inspect, except: [:key_secret, :access_token]}
   defstruct [
     :key_id,
     :key_secret,

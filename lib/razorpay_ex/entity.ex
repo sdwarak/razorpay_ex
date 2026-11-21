@@ -134,9 +134,13 @@ defmodule RazorpayEx.Entity do
       RazorpayEx.Entity.fetch("pay_29QQoUBi66xm2f", :payment)
   """
   @spec fetch(String.t(), atom()) :: Client.response()
-  def fetch(id, resource_type) do
-    Client.request(:get, "/#{Constants.endpoint_path(resource_type)}/#{id}")
+  def fetch(id, resource_type)
+      when is_binary(id) and id != "" and is_atom(resource_type) do
+    Client.request(:get, "/#{Constants.endpoint_path(resource_type)}/#{URI.encode_www_form(id)}")
   end
+
+  def fetch(_id, _resource_type),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid resource ID or type", 400)}
 
   @doc """
   Lists entities for a given resource type.

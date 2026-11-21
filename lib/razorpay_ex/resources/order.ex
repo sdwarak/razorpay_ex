@@ -92,9 +92,11 @@ defmodule RazorpayEx.Order do
       {:ok, order} = RazorpayEx.Order.fetch("order_9A33XWu170gUtm")
   """
   @spec fetch(String.t()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
-  def fetch(id) do
-    Client.request(:get, "/orders/#{id}")
+  def fetch(id) when is_binary(id) and id != "" do
+    Client.request(:get, "/orders/#{URI.encode_www_form(id)}")
   end
+
+  def fetch(_id), do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid order ID", 400)}
 
   @doc """
   Lists all orders with optional filters.
@@ -131,9 +133,12 @@ defmodule RazorpayEx.Order do
       })
   """
   @spec update(String.t(), map()) :: {:ok, t()} | {:error, RazorpayEx.Error.t()}
-  def update(id, params) do
-    Client.request(:patch, "/orders/#{id}", params)
+  def update(id, params) when is_binary(id) and id != "" do
+    Client.request(:patch, "/orders/#{URI.encode_www_form(id)}", params)
   end
+
+  def update(_id, _params),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid order ID", 400)}
 
   @doc """
   Gets payments for an order.
@@ -149,7 +154,12 @@ defmodule RazorpayEx.Order do
   """
   @spec payments(String.t(), map()) ::
           {:ok, list(RazorpayEx.Payment.t())} | {:error, Razorpay.Error.t()}
-  def payments(id, params \\ %{}) do
-    Client.request(:get, "/orders/#{id}/payments", %{}, params: params)
+  def payments(id, params \\ %{})
+
+  def payments(id, params) when is_binary(id) and id != "" do
+    Client.request(:get, "/orders/#{URI.encode_www_form(id)}/payments", %{}, params: params)
   end
+
+  def payments(_id, _params),
+    do: {:error, RazorpayEx.Error.new(:bad_request, "Invalid order ID", 400)}
 end
